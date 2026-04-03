@@ -6,21 +6,27 @@ import { Input } from '@/components/ui/input';
 import { useGradientGenerator } from '@/hooks/useGradientGenerator';
 import { colorPresets } from '@/lib/constants';
 import { colorToParam } from '@/lib/utils';
-import { Download, RefreshCw, Plus, Trash2, Palette, Sparkles, Layers, Code, Zap } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Palette, Sparkles, Layers, Code, Zap, Wand2, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function GradientGenerator() {
   const {
     colors,
-    setColors,
     width,
     setWidth,
     height,
     setHeight,
     svgContent,
     isGenerating,
+    colorMode,
     generateGradient,
-    downloadGradient
+    downloadGradient,
+    handleColorChange,
+    addColor,
+    removeColor,
+    switchMode,
+    regenerateRecommendations,
+    applyPreset
   } = useGradientGenerator();
 
   const [newColor, setNewColor] = useState('');
@@ -32,28 +38,19 @@ export default function GradientGenerator() {
     generateGradient();
   }, [generateGradient]);
 
-  const handleColorChange = (index: number, color: string) => {
-    const newColors = [...colors];
-    newColors[index] = color;
-    setColors(newColors);
-  };
-
-  const addColor = () => {
-    if (newColor && colors.length < 8) {
-      setColors([...colors, newColor]);
-      setNewColor('');
+  const handleAddColor = () => {
+    if (colors.length < 8) {
+      if (colorMode === 'free' && newColor) {
+        addColor(newColor);
+        setNewColor('');
+      } else {
+        addColor();
+      }
     }
   };
 
-  const removeColor = (index: number) => {
-    if (colors.length > 1) {
-      const newColors = colors.filter((_, i) => i !== index);
-      setColors(newColors);
-    }
-  };
-
-  const applyPreset = (preset: typeof colorPresets[0]) => {
-    setColors(preset.colors);
+  const handleApplyPreset = (preset: typeof colorPresets[0]) => {
+    applyPreset(preset.colors);
   };
 
   const generateApiLink = () => {
@@ -209,6 +206,47 @@ export default function GradientGenerator() {
               </div>
             </div>
 
+            {/* Color Mode Selector */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <SlidersHorizontal className="w-5 h-5 text-primary" />
+                <h2 className="font-display font-semibold text-lg">Color Mode</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 p-1 bg-muted rounded-xl">
+                <button
+                  onClick={() => switchMode('free')}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200",
+                    colorMode === 'free'
+                      ? "bg-card text-foreground shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                  )}
+                >
+                  <Palette className="w-4 h-4" />
+                  Free Select
+                </button>
+                <button
+                  onClick={() => switchMode('recommend')}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200",
+                    colorMode === 'recommend'
+                      ? "bg-card text-foreground shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                  )}
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Recommend
+                </button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                {colorMode === 'free' 
+                  ? "Free mode: Manually select each color for full control." 
+                  : "Recommend mode: System generates harmonious color combinations based on your first color selection."}
+              </p>
+            </div>
+
             {/* Colors */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
@@ -216,10 +254,36 @@ export default function GradientGenerator() {
                   <Palette className="w-5 h-5 text-primary" />
                   <h2 className="font-display font-semibold text-lg">Colors</h2>
                 </div>
-                <span className="text-xs font-mono bg-muted px-2 py-1 rounded-md text-muted-foreground">
-                  {colors.length}/8
-                </span>
+                <div className="flex items-center gap-2">
+                  {colorMode === 'recommend' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={regenerateRecommendations}
+                      className="text-xs text-muted-foreground hover:text-primary"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Regen
+                    </Button>
+                  )}
+                  <span className="text-xs font-mono bg-muted px-2 py-1 rounded-md text-muted-foreground">
+                    {colors.length}/8
+                  </span>
+                </div>
               </div>
+              
+              {/* Base Color Hint for Recommend Mode */}
+              {colorMode === 'recommend' && colors.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                  <div className="flex items-center gap-2 text-primary font-medium mb-1">
+                    <Wand2 className="w-4 h-4" />
+                    <span>Base Color</span>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Modify the first color to regenerate the entire harmonious palette.
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {colors.map((color, index) => (
@@ -229,8 +293,18 @@ export default function GradientGenerator() {
                         type="color"
                         value={color}
                         onChange={(e) => handleColorChange(index, e.target.value)}
-                        className="w-12 h-12 p-1 rounded-xl cursor-pointer border-2 hover:border-primary transition-colors"
+                        className={cn(
+                          "w-12 h-12 p-1 rounded-xl cursor-pointer border-2 transition-colors",
+                          colorMode === 'recommend' && index === 0 
+                            ? "border-primary ring-2 ring-primary/20" 
+                            : "hover:border-primary"
+                        )}
                       />
+                      {colorMode === 'recommend' && index === 0 && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                          <Wand2 className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      )}
                     </div>
                     <Input
                       type="text"
@@ -253,28 +327,40 @@ export default function GradientGenerator() {
 
                {colors.length < 8 && (
                 <div className="flex items-center gap-3 pt-2">
-                   <div className="relative flex-shrink-0">
-                      <Input
-                        type="color"
-                        value={newColor || '#000000'}
-                        onChange={(e) => setNewColor(e.target.value)}
-                         className="w-12 h-12 p-1 rounded-xl cursor-pointer border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors"
-                      />
-                   </div>
-                   <Input
-                      type="text"
-                      placeholder="#000000"
-                      value={newColor.toUpperCase()}
-                      onChange={(e) => setNewColor(e.target.value)}
-                      className="font-mono text-sm tracking-wider uppercase"
-                    />
-                   <Button 
-                    onClick={addColor}
-                    disabled={!newColor}
-                    className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                   {colorMode === 'free' ? (
+                     <>
+                       <div className="relative flex-shrink-0">
+                          <Input
+                            type="color"
+                            value={newColor || '#000000'}
+                            onChange={(e) => setNewColor(e.target.value)}
+                             className="w-12 h-12 p-1 rounded-xl cursor-pointer border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors"
+                          />
+                       </div>
+                       <Input
+                          type="text"
+                          placeholder="#000000"
+                          value={newColor.toUpperCase()}
+                          onChange={(e) => setNewColor(e.target.value)}
+                          className="font-mono text-sm tracking-wider uppercase"
+                        />
+                       <Button 
+                        onClick={handleAddColor}
+                        disabled={!newColor}
+                        className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                     </>
+                   ) : (
+                     <Button 
+                      onClick={handleAddColor}
+                      className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Recommended Color
+                    </Button>
+                   )}
                 </div>
                )}
             </div>
@@ -289,7 +375,7 @@ export default function GradientGenerator() {
                 {colorPresets.map((preset) => (
                   <button
                     key={preset.name}
-                    onClick={() => applyPreset(preset)}
+                    onClick={() => handleApplyPreset(preset)}
                     className="group relative overflow-hidden rounded-lg aspect-[3/2] border border-border shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
                   >
                     <div 
