@@ -1,13 +1,99 @@
-import { useState, useCallback } from 'react';
-import { generateRandomSVG } from '@/lib/services/gradientGenerator';
-import { colorToParam } from '@/lib/utils';
+import { useState, useCallback, useEffect } from 'react';
+import { colorToParam, recommendColorPalette } from '@/lib/utils';
+
+type ColorMode = 'free' | 'recommended';
+
+interface CachedData {
+  freeModeColors: string[];
+  recommendedModeColors: string[];
+  lastUsedBaseColor: string | null;
+}
+
+const CACHE_KEY = 'gradient-generator-cache';
+
+function loadCache(): CachedData {
+  if (typeof window === 'undefined') {
+    return {
+      freeModeColors: ['#5135FF', '#FF5828', '#F69CFF', '#FFA50F'],
+      recommendedModeColors: ['#5135FF', '#FF5828', '#F69CFF', '#FFA50F'],
+      lastUsedBaseColor: null
+    };
+  }
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.error('Failed to load cache:', e);
+  }
+  return {
+    freeModeColors: ['#5135FF', '#FF5828', '#F69CFF', '#FFA50F'],
+    recommendedModeColors: ['#5135FF', '#FF5828', '#F69CFF', '#FFA50F'],
+    lastUsedBaseColor: null
+  };
+}
+
+function saveCache(cache: CachedData) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    console.error('Failed to save cache:', e);
+  }
+}
 
 export function useGradientGenerator() {
-  const [colors, setColors] = useState<string[]>(['#5135FF', '#FF5828', '#F69CFF', '#FFA50F']);
+  const [cache, setCache] = useState<CachedData>(loadCache);
+  const [colorMode, setColorMode] = useState<ColorMode>('free');
   const [width, setWidth] = useState(600);
   const [height, setHeight] = useState(400);
   const [svgContent, setSvgContent] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasGeneratedRecommendations, setHasGeneratedRecommendations] = useState(false);
+
+  const colors = colorMode === 'free' ? cache.freeModeColors : cache.recommendedModeColors;
+
+  const setColors = useCallback((newColors: string[]) => {
+    setCache(prev => {
+      const updated = {
+        ...prev,
+        [colorMode === 'free' ? 'freeModeColors' : 'recommendedModeColors']: newColors
+      };
+      saveCache(updated);
+      return updated;
+    });
+  }, [colorMode]);
+
+  const switchColorMode = useCallback((mode: ColorMode) => {
+    setColorMode(mode);
+    if (mode === 'recommended' && !hasGeneratedRecommendations && cache.lastUsedBaseColor) {
+      const recommended = recommendColorPalette(cache.lastUsedBaseColor);
+      setCache(prev => {
+        const updated = {
+          ...prev,
+          recommendedModeColors: recommended
+        };
+        saveCache(updated);
+        return updated;
+      });
+      setHasGeneratedRecommendations(true);
+    }
+  }, [cache.lastUsedBaseColor, hasGeneratedRecommendations]);
+
+  const generateRecommendations = useCallback((baseColor: string) => {
+    const recommended = recommendColorPalette(baseColor);
+    setCache(prev => {
+      const updated = {
+        ...prev,
+        recommendedModeColors: recommended,
+        lastUsedBaseColor: baseColor
+      };
+      saveCache(updated);
+      return updated;
+    });
+    setHasGeneratedRecommendations(true);
+  }, []);
 
   const generateGradient = useCallback(async () => {
     setIsGenerating(true);
@@ -40,9 +126,17 @@ export function useGradientGenerator() {
     URL.revokeObjectURL(url);
   }, [svgContent]);
 
+  useEffect(() => {
+    generateGradient();
+  }, [generateGradient]);
+
   return {
     colors,
     setColors,
+    colorMode,
+    switchColorMode,
+    generateRecommendations,
+    hasGeneratedRecommendations,
     width,
     setWidth,
     height,

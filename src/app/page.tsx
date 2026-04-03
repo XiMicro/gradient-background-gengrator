@@ -6,13 +6,17 @@ import { Input } from '@/components/ui/input';
 import { useGradientGenerator } from '@/hooks/useGradientGenerator';
 import { colorPresets } from '@/lib/constants';
 import { colorToParam } from '@/lib/utils';
-import { Download, RefreshCw, Plus, Trash2, Palette, Sparkles, Layers, Code, Zap } from 'lucide-react';
+import { Download, RefreshCw, Plus, Trash2, Palette, Sparkles, Layers, Code, Zap, Wand2, MousePointer2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function GradientGenerator() {
   const {
     colors,
     setColors,
+    colorMode,
+    switchColorMode,
+    generateRecommendations,
+    hasGeneratedRecommendations,
     width,
     setWidth,
     height,
@@ -26,6 +30,7 @@ export default function GradientGenerator() {
   const [newColor, setNewColor] = useState('');
   const [apiLinkCopied, setApiLinkCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [baseColorForRecommendation, setBaseColorForRecommendation] = useState('#5135FF');
 
   useEffect(() => {
     setMounted(true);
@@ -54,6 +59,10 @@ export default function GradientGenerator() {
 
   const applyPreset = (preset: typeof colorPresets[0]) => {
     setColors(preset.colors);
+  };
+
+  const handleGenerateRecommendations = () => {
+    generateRecommendations(baseColorForRecommendation);
   };
 
   const generateApiLink = () => {
@@ -209,6 +218,40 @@ export default function GradientGenerator() {
               </div>
             </div>
 
+            {/* Color Mode */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                 <Wand2 className="w-5 h-5 text-primary" />
+                 <h2 className="font-display font-semibold text-lg">Color Mode</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => switchColorMode('free')}
+                  className={cn(
+                    "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
+                    colorMode === 'free'
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-muted-foreground/50"
+                  )}
+                >
+                  <MousePointer2 className="w-5 h-5" />
+                  <span className="font-medium">Free Choice</span>
+                </button>
+                <button
+                  onClick={() => switchColorMode('recommended')}
+                  className={cn(
+                    "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
+                    colorMode === 'recommended'
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-muted-foreground/50"
+                  )}
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <span className="font-medium">Recommended</span>
+                </button>
+              </div>
+            </div>
+
             {/* Colors */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
@@ -220,6 +263,37 @@ export default function GradientGenerator() {
                   {colors.length}/8
                 </span>
               </div>
+              
+              {colorMode === 'recommended' && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {hasGeneratedRecommendations 
+                      ? 'Change the base color to get a new recommended palette!' 
+                      : 'Choose a base color and let us recommend the perfect palette!'}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="color"
+                      value={baseColorForRecommendation}
+                      onChange={(e) => setBaseColorForRecommendation(e.target.value)}
+                      className="w-12 h-12 p-1 rounded-xl cursor-pointer border-2 hover:border-primary transition-colors"
+                    />
+                    <Input
+                      type="text"
+                      value={baseColorForRecommendation.toUpperCase()}
+                      onChange={(e) => setBaseColorForRecommendation(e.target.value)}
+                      className="font-mono text-sm tracking-wider uppercase"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleGenerateRecommendations}
+                    className="w-full"
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    {hasGeneratedRecommendations ? 'Regenerate Recommendations' : 'Generate Recommendations'}
+                  </Button>
+                </div>
+              )}
               
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {colors.map((color, index) => (

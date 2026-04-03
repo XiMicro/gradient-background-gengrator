@@ -4,12 +4,33 @@ A powerful Next.js application for creating stunning SVG gradient backgrounds wi
 
 ## Features
 
+- **Dual Color Modes**: Choose between Free Choice mode for full control or Recommended mode for AI-assisted color palettes
+- **Smart Color Recommendations**: Select a base color and get complementary, analogous, and triadic color combinations
 - **Real-time Preview**: See your gradient backgrounds update instantly as you modify colors
 - **Custom Color Palettes**: Add up to 8 colors to create unique gradients
 - **Preset Templates**: Choose from professionally designed color combinations
 - **API Integration**: Generate gradients programmatically via REST API
 - **SVG Export**: Download your creations as high-quality SVG files
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Local Data Caching**: Your color palettes are automatically saved across sessions
+
+## Usage Guide
+
+### Free Choice Mode
+- Complete manual control over your color palette
+- Add, remove, and modify colors freely
+- Perfect for when you have specific colors in mind
+
+### Recommended Mode
+1. Select a base color using the color picker
+2. Click "Generate Recommendations" to get a smart color palette
+3. The algorithm uses color theory to suggest:
+   - Complementary colors (high contrast)
+   - Analogous colors (harmonious)
+   - Triadic colors (balanced)
+   - Adjusted brightness and saturation variations
+4. You can still modify, add, or remove any recommended colors
+5. Change the base color at any time and regenerate
 
 ## Getting Started
 
